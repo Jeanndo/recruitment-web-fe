@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { SignInScreen } from "@/components/auth/sign-in-screen";
 
 export const metadata: Metadata = {
   title: "Sign in",
   description:
-    "Sign in to BrightCore to save roles, track applications and manage job alerts.",
+    "Sign in to your BrightCore account to manage roles and applications.",
 };
 
 export default function SignInPage() {
-  return <AuthCard mode="sign-in" />;
+  return <SignInScreen />;
 }

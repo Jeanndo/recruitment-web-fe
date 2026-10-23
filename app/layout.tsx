@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { ThemeScript } from "@/components/theme/theme-script";
 
+import "react-toastify/dist/ReactToastify.css";
 import "./globals.css";
 
 const geistSans = Geist({

@@ -56,7 +56,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
     "status" in currentUser.error &&
     currentUser.error.status === 401;
 
-  const signInHref = `/admin/sign-in?next=${encodeURIComponent(
+  const signInHref = `/sign-in?next=${encodeURIComponent(
     `${pathname}${typeof window === "undefined" ? "" : window.location.search}`,
   )}`;
 
@@ -105,7 +105,7 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
                 Try again
               </button>
               <Link
-                href="/admin/sign-in"
+                href="/sign-in"
                 className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Back to sign in

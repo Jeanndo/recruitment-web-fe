@@ -39,7 +39,7 @@ export function AdminSidebar({
   function handleSignOut() {
     logout.mutate(undefined, {
       onSettled: () => {
-        router.replace("/admin/sign-in");
+        router.replace("/sign-in");
         router.refresh();
       },
     });

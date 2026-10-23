@@ -3,7 +3,12 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2, LockKeyhole, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  LockKeyhole,
+} from "lucide-react";
 
 import { Brand } from "@/components/layout/brand";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -13,6 +18,12 @@ import { useCurrentUser, useLogin } from "@/hooks/use-admin-auth";
 
 const fieldClass =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/20 focus-visible:outline-none";
+
+const bullets = [
+  "Publish roles and control their lifecycle.",
+  "Review applications and leave internal notes.",
+  "Download applicant CVs through a protected API.",
+];
 
 function safeNext(value: string | null): string {
   if (!value || !value.startsWith("/admin") || value.startsWith("//")) {
@@ -67,12 +78,7 @@ function SignInForm() {
           aria-hidden="true"
           className="absolute -top-32 -right-24 size-96 rounded-full bg-primary/20 blur-3xl"
         />
-        <Brand href="/" className="relative text-sidebar-foreground" />
-
         <div className="relative max-w-md">
-          <Badge className="bg-primary/15 text-primary-foreground ring-1 ring-primary/30">
-            Staff workspace
-          </Badge>
           <h1 className="mt-5 text-4xl leading-tight font-semibold tracking-tight text-balance">
             Review great candidates. Move hiring forward.
           </h1>
@@ -82,14 +88,15 @@ function SignInForm() {
           </p>
 
           <ul className="mt-8 space-y-3 text-sm text-sidebar-foreground/80">
-            <li className="flex items-center gap-3">
-              <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
-              Every admin route is session protected.
-            </li>
-            <li className="flex items-center gap-3">
-              <LockKeyhole aria-hidden="true" className="size-4 text-primary" />
-              Applicant data and CVs stay behind the API.
-            </li>
+            {bullets.map((bullet) => (
+              <li key={bullet} className="flex items-center gap-3">
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-primary"
+                />
+                {bullet}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -99,19 +106,7 @@ function SignInForm() {
       </section>
 
       <section className="relative flex flex-col bg-background">
-        <div className="flex items-center justify-between p-5 sm:p-8">
-          <Brand href="/" className="lg:hidden" />
-          <div className="ml-auto flex items-center gap-2">
-            <Link
-              href="/"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              <span className="hidden sm:inline">Back to site</span>
-            </Link>
-            <ThemeToggle className="size-9" />
-          </div>
-        </div>
+        
 
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
           <div className="w-full max-w-sm">
@@ -119,23 +114,19 @@ function SignInForm() {
               <LockKeyhole aria-hidden="true" className="size-5" />
             </span>
             <h2 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">
-              Admin sign in
+              Sign in
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Use the staff account seeded for this workspace to manage roles
-              and applications.
-            </p>
 
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
               <div>
                 <label
-                  htmlFor="admin-email"
+                  htmlFor="sign-in-email"
                   className="mb-1.5 block text-sm font-medium"
                 >
                   Email
                 </label>
                 <input
-                  id="admin-email"
+                  id="sign-in-email"
                   name="email"
                   type="email"
                   required
@@ -149,13 +140,13 @@ function SignInForm() {
 
               <div>
                 <label
-                  htmlFor="admin-password"
+                  htmlFor="sign-in-password"
                   className="mb-1.5 block text-sm font-medium"
                 >
                   Password
                 </label>
                 <input
-                  id="admin-password"
+                  id="sign-in-password"
                   name="password"
                   type="password"
                   required
@@ -166,17 +157,6 @@ function SignInForm() {
                   className={fieldClass}
                 />
               </div>
-
-              {login.isError ? (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                >
-                  {login.error instanceof Error
-                    ? login.error.message
-                    : "Sign in failed. Please try again."}
-                </p>
-              ) : null}
 
               <Button
                 type="submit"
@@ -196,8 +176,18 @@ function SignInForm() {
             </form>
 
             <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-              Candidate accounts are not available yet. This sign-in is for
-              BrightCore staff only.
+              Candidate accounts are coming soon. This sign-in is for BrightCore
+              staff.
+            </p>
+
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Looking for a role?{" "}
+              <Link
+                href="/"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Browse open roles
+              </Link>
             </p>
           </div>
         </div>
@@ -206,7 +196,8 @@ function SignInForm() {
   );
 }
 
-export function AdminSignIn() {
+/** The single sign-in screen for the whole platform. */
+export function SignInScreen() {
   return (
     <Suspense
       fallback={
