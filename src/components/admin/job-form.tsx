@@ -5,15 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  AlertCircle,
   ArrowLeft,
-  CheckCircle2,
   Loader2,
   Lock,
   Plus,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   useFieldArray,
@@ -250,19 +247,12 @@ function BulletEditor({
   );
 }
 
-export function JobForm({
-  job,
-  notice,
-}: {
-  job?: AdminJobDetail;
-  notice?: string;
-}) {
+export function JobForm({ job }: { job?: AdminJobDetail }) {
   const router = useRouter();
   const createJob = useCreateJob();
   const updateJob = useUpdateJob(job?.id ?? 0);
   const closeJob = useCloseJob();
   const [closeOpen, setCloseOpen] = useState(false);
-  const [saved, setSaved] = useState<string | null>(notice ?? null);
   const [status, setStatus] = useState<JobStatus>(job?.status ?? "Draft");
   const [closingDate, setClosingDate] = useState(
     job?.closing_date ?? inDays(30),
@@ -286,10 +276,7 @@ export function JobForm({
   const statusField = register("status");
   const closingDateField = register("closing_date");
 
-  const mutationError = job ? updateJob.error : createJob.error;
-  const isPending = job ? updateJob.isPending : createJob.isPending;
-
-  function toPayload(values: JobFormValues): JobCreateInput {
+  const isPending = job ? updateJob.isPending : createJob.isPending;  function toPayload(values: JobFormValues): JobCreateInput {
     return {
       title: values.title.trim(),
       location: values.location.trim(),
@@ -306,8 +293,6 @@ export function JobForm({
   }
 
   function onSubmit(values: JobFormValues) {
-    setSaved(null);
-
     if (job) {
       const payload = toPayload(values);
       updateJob.mutate(
@@ -315,7 +300,6 @@ export function JobForm({
         {
           onSuccess: () => {
             reset(values);
-            setSaved("Role changes saved.");
             router.refresh();
           },
         },
@@ -334,9 +318,8 @@ export function JobForm({
     if (!job) return;
 
     closeJob.mutate(job.id, {
-      onSuccess: (result) => {
+      onSuccess: () => {
         setCloseOpen(false);
-        setSaved(result.message);
         form.setValue("status", "Closed");
         setStatus("Closed");
         router.refresh();
@@ -379,45 +362,6 @@ export function JobForm({
           ) : null}
         </div>
       </div>
-
-      {saved ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-3 rounded-xl border border-primary/20 bg-accent/60 px-4 py-2.5 text-sm"
-        >
-          <CheckCircle2
-            aria-hidden="true"
-            className="size-4 shrink-0 text-primary"
-          />
-          <span className="min-w-0 flex-1">{saved}</span>
-          <button
-            type="button"
-            onClick={() => setSaved(null)}
-            aria-label="Dismiss message"
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-          >
-            <X aria-hidden="true" className="size-3.5" />
-          </button>
-        </div>
-      ) : null}
-
-      {mutationError ? (
-        <div
-          role="alert"
-          className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          <AlertCircle
-            aria-hidden="true"
-            className="mt-0.5 size-4 shrink-0"
-          />
-          <p>
-            {mutationError instanceof Error
-              ? mutationError.message
-              : "The role could not be saved."}
-          </p>
-        </div>
-      ) : null}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">

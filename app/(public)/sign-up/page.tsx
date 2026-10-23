@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AuthCard } from "@/components/auth/auth-card";
+import { SignUpCard } from "@/components/auth/auth-card";
 
 export const metadata: Metadata = {
   title: "Sign up",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function SignUpPage() {
-  return <AuthCard mode="sign-up" />;
+  return <SignUpCard />;
 }

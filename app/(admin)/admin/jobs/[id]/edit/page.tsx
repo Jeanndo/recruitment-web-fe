@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { EditJobPageContent } from "@/components/admin/edit-job-page";
-
+export const instant = false
 export const metadata: Metadata = {
   title: "Edit role",
 };

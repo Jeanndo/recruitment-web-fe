@@ -14,6 +14,7 @@ import {
   Phone,
   X,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 import { ApplicationStatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
@@ -62,17 +63,14 @@ function ReviewSkeleton() {
 
 function ApplicationReview({
   application,
-  onNotify,
   onClose,
 }: {
   application: AdminApplicationDetail;
-  onNotify?: (message: string) => void;
   onClose: () => void;
 }) {
   const updateStatus = useUpdateApplicationStatus();
   const download = useDownloadCv();
   const [note, setNote] = useState(application.admin_note ?? "");
-  const [feedback, setFeedback] = useState<string | null>(null);
 
   const noteChanged = note !== (application.admin_note ?? "");
   const isDownloading = download.isPending && download.variables?.id === application.id;
@@ -87,14 +85,14 @@ function ApplicationReview({
       {
         onSuccess: (result) => {
           const changed = application.status !== result.status;
-          const message = changed
-            ? `${application.full_name} was ${result.status.toLowerCase()}.`
-            : "Internal note saved.";
-          setFeedback(message);
-          onNotify?.(message);
+          toast.success(
+            changed
+              ? `${application.full_name} was ${result.status.toLowerCase()}.`
+              : "Internal note saved.",
+          );
         },
         onError: (error) => {
-          setFeedback(
+          toast.error(
             error instanceof Error ? error.message : "The review could not be saved.",
           );
         },
@@ -111,11 +109,10 @@ function ApplicationReview({
       },
       {
         onSuccess: () => {
-          setFeedback("Internal note saved.");
-          onNotify?.("Internal note saved.");
+          toast.success("Internal note saved.");
         },
         onError: (error) => {
-          setFeedback(
+          toast.error(
             error instanceof Error ? error.message : "The note could not be saved.",
           );
         },
@@ -126,12 +123,10 @@ function ApplicationReview({
   function handleDownload() {
     download.mutate(application, {
       onSuccess: (filename) => {
-        const message = `Downloaded ${filename}.`;
-        setFeedback(message);
-        onNotify?.(message);
+        toast.success(`Downloaded ${filename}.`);
       },
       onError: (error) => {
-        setFeedback(
+        toast.error(
           error instanceof Error ? error.message : "The CV could not be downloaded.",
         );
       },
@@ -301,7 +296,7 @@ function ApplicationReview({
           aria-live="polite"
           className="min-h-4 text-xs font-medium text-muted-foreground"
         >
-          {updateStatus.isPending ? "Saving…" : feedback}
+          {updateStatus.isPending ? "Saving…" : null}
         </p>
         <div className="flex gap-2">
           <Button
@@ -354,12 +349,10 @@ export function ApplicationDetailSheet({
   applicationId,
   open,
   onOpenChange,
-  onNotify,
 }: {
   applicationId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNotify?: (message: string) => void;
 }) {
   const application = useApplicationDetail(applicationId);
 
@@ -415,7 +408,6 @@ export function ApplicationDetailSheet({
           <ApplicationReview
             key={application.data.id}
             application={application.data}
-            onNotify={onNotify}
             onClose={() => onOpenChange(false)}
           />
         )}

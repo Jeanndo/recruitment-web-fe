@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
 
 import { JobForm } from "@/components/admin/job-form";
@@ -21,7 +21,6 @@ function FormSkeleton() {
 
 function EditJobInner() {
   const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const jobId = Number(params?.id);
   const job = useAdminJob(jobId);
 
@@ -74,14 +73,7 @@ function EditJobInner() {
   }
 
   return (
-    <JobForm
-      job={job.data}
-      notice={
-        searchParams.get("created") === "1"
-          ? "Role created. Review the listing below before publishing."
-          : undefined
-      }
-    />
+    <JobForm job={job.data} />
   );
 }
 

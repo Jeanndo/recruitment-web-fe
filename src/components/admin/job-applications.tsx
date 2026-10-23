@@ -16,6 +16,7 @@ import {
   SearchX,
   X,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 import { ApplicationDetailSheet } from "@/components/admin/application-detail-sheet";
 import {
@@ -58,10 +59,6 @@ function JobApplicationsInner() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<{
-    message: string;
-    tone: "success" | "error";
-  } | null>(null);
   const deferredSearch = useDeferredValue(search);
 
   const {
@@ -96,19 +93,16 @@ function JobApplicationsInner() {
       { id: application.id, status: nextStatus },
       {
         onSuccess: () => {
-          setFeedback({
-            message: `${application.full_name} was ${nextStatus.toLowerCase()}.`,
-            tone: "success",
-          });
+          toast.success(
+            `${application.full_name} was ${nextStatus.toLowerCase()}.`,
+          );
         },
         onError: (mutationError) => {
-          setFeedback({
-            message:
-              mutationError instanceof Error
-                ? mutationError.message
-                : "The review could not be saved.",
-            tone: "error",
-          });
+          toast.error(
+            mutationError instanceof Error
+              ? mutationError.message
+              : "The review could not be saved.",
+          );
         },
       },
     );
@@ -117,19 +111,14 @@ function JobApplicationsInner() {
   function downloadCv(application: AdminApplicationItem) {
     download.mutate(application, {
       onSuccess: (filename) => {
-        setFeedback({
-          message: `Downloaded ${filename}.`,
-          tone: "success",
-        });
+        toast.success(`Downloaded ${filename}.`);
       },
       onError: (mutationError) => {
-        setFeedback({
-          message:
-            mutationError instanceof Error
-              ? mutationError.message
-              : "The CV could not be downloaded.",
-          tone: "error",
-        });
+        toast.error(
+          mutationError instanceof Error
+            ? mutationError.message
+            : "The CV could not be downloaded.",
+        );
       },
     });
   }
@@ -309,29 +298,6 @@ function JobApplicationsInner() {
           </div>
         </div>
       </div>
-
-      {feedback ? (
-        <div
-          role={feedback.tone === "error" ? "alert" : "status"}
-          aria-live="polite"
-          className={cn(
-            "flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm",
-            feedback.tone === "error"
-              ? "border-destructive/20 bg-destructive/10 text-destructive"
-              : "border-primary/20 bg-accent/60 text-foreground",
-          )}
-        >
-          <span className="min-w-0 flex-1">{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            aria-label="Dismiss message"
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-          >
-            <X aria-hidden="true" className="size-3.5" />
-          </button>
-        </div>
-      ) : null}
 
       <section
         className={cn(
@@ -622,9 +588,6 @@ function JobApplicationsInner() {
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
-        onNotify={(message) =>
-          setFeedback({ message, tone: "success" })
-        }
       />
     </div>
   );

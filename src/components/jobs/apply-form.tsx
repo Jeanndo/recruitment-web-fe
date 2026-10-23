@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
 
 import { submitApplication } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,9 @@ export function ApplyForm({
         coverNote,
         cv: cvFile,
       });
+      toast.success(
+        "Application sent. We emailed you a confirmation — check your inbox.",
+      );
       setSubmitted(true);
     } catch (submissionError) {
       setError(

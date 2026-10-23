@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 
 import {
   closeAdminJob,
@@ -20,12 +21,22 @@ function useInvalidateJobs() {
   };
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function useCreateJob() {
   const invalidate = useInvalidateJobs();
 
   return useMutation({
     mutationFn: (payload: JobCreateInput) => createAdminJob(payload),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      toast.success("Role created.");
+      invalidate();
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, "The role could not be created."));
+    },
   });
 }
 
@@ -34,7 +45,13 @@ export function useUpdateJob(id: number) {
 
   return useMutation({
     mutationFn: (payload: JobUpdateInput) => updateAdminJob(id, payload),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      toast.success("Role changes saved.");
+      invalidate();
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, "The role could not be saved."));
+    },
   });
 }
 
@@ -45,10 +62,14 @@ export function useCloseJob() {
   return useMutation({
     mutationFn: (id: number) => closeAdminJob(id),
     onSuccess: (data) => {
+      toast.success(data.message);
       void queryClient.invalidateQueries({
         queryKey: adminKeys.job(data.id),
       });
       invalidate();
+    },
+    onError: (error) => {
+      toast.error(errorMessage(error, "The role could not be closed."));
     },
   });
 }

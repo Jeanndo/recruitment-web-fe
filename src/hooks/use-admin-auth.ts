@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 
 import {
   getCurrentUser,
@@ -26,6 +27,12 @@ export function useLogin() {
       login(email, password),
     onSuccess: (data) => {
       queryClient.setQueryData(adminKeys.me, data.user);
+      toast.success(`Welcome back, ${data.user.full_name.split(" ")[0]}.`);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Sign in failed. Please try again.",
+      );
     },
   });
 }
@@ -35,6 +42,9 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: logout,
+    onSuccess: () => {
+      toast.success("You have been signed out.");
+    },
     onSettled: () => {
       queryClient.clear();
     },

@@ -10,7 +10,6 @@ import {
   Plus,
   Search,
   SearchX,
-  X,
 } from "lucide-react";
 
 import { JobStatusBadge } from "@/components/admin/status-badge";
@@ -47,10 +46,6 @@ function AdminJobsInner() {
   const [status, setStatus] = useState<AdminJobFilter>("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [feedback, setFeedback] = useState<{
-    message: string;
-    tone: "success" | "error";
-  } | null>(null);
   const [jobToClose, setJobToClose] = useState<AdminJobListItem | null>(null);
   const deferredSearch = useDeferredValue(search);
 
@@ -87,19 +82,9 @@ function AdminJobsInner() {
     if (!jobToClose) return;
 
     closeJob.mutate(jobToClose.id, {
-      onSuccess: (result) => {
-        setFeedback({ message: result.message, tone: "success" });
+      onSuccess: () => {
         setJobToClose(null);
         setPage(1);
-      },
-      onError: (mutationError) => {
-        setFeedback({
-          message:
-            mutationError instanceof Error
-              ? mutationError.message
-              : "The role could not be closed.",
-          tone: "error",
-        });
       },
     });
   }
@@ -124,29 +109,6 @@ function AdminJobsInner() {
           New role
         </Link>
       </div>
-
-      {feedback ? (
-        <div
-          role={feedback.tone === "error" ? "alert" : "status"}
-          aria-live="polite"
-          className={cn(
-            "flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm",
-            feedback.tone === "error"
-              ? "border-destructive/20 bg-destructive/10 text-destructive"
-              : "border-primary/20 bg-accent/60 text-foreground",
-          )}
-        >
-          <span className="min-w-0 flex-1">{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            aria-label="Dismiss message"
-            className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-          >
-            <X aria-hidden="true" className="size-3.5" />
-          </button>
-        </div>
-      ) : null}
 
       <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
