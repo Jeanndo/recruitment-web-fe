@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { useAdminStore } from "@/stores/admin-store";
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { getJobApplications } from "@/lib/admin-api";
+import { adminKeys } from "@/lib/query-keys";
 import {
   emptyStatusCounts,
   type ApplicationFilter,
-  type ApplicationStatusCounts,
 } from "@/types/admin";
 
 export interface JobApplicationsQuery {
@@ -24,54 +25,38 @@ export function useJobApplications({
   page,
   pageSize = 8,
 }: JobApplicationsQuery) {
-  const jobs = useAdminStore((state) => state.jobs);
-  const applications = useAdminStore((state) => state.applications);
-
-  return useMemo(() => {
-    const job = jobs.find((item) => item.id === jobId);
-    const jobApplications = applications.filter(
-      (application) => application.job_id === jobId,
-    );
-
-    const counts: ApplicationStatusCounts = emptyStatusCounts();
-    for (const application of jobApplications) {
-      counts.total += 1;
-      if (application.status === "Pending") counts.pending += 1;
-      if (application.status === "Accepted") counts.accepted += 1;
-      if (application.status === "Rejected") counts.rejected += 1;
-    }
-
-    const query = search.trim().toLowerCase();
-    const filtered = jobApplications
-      .filter((application) => {
-        if (status !== "All" && application.status !== status) return false;
-        if (!query) return true;
-
-        return [application.full_name, application.email]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const currentPage = Math.min(Math.max(page, 1), totalPages);
-    const start = (currentPage - 1) * pageSize;
-
-    return {
-      job,
-      applications: filtered.slice(start, start + pageSize),
-      total,
-      totalPages,
-      page: currentPage,
+  const dashboard = useAdminDashboard();
+  const query = useQuery({
+    queryKey: adminKeys.applications(jobId, {
+      status,
+      search,
+      page,
       pageSize,
-      counts,
-      hasApplications: jobApplications.length > 0,
-      hasFilters: status !== "All" || query !== "",
-    };
-  }, [applications, jobId, jobs, page, pageSize, search, status]);
+    }),
+    queryFn: () => getJobApplications({ jobId, status, search, page, pageSize }),
+    enabled: Number.isInteger(jobId) && jobId > 0,
+    placeholderData: keepPreviousData,
+  });
+
+  const dashboardJob = dashboard.data?.jobs.find(
+    (job) => job.job_id === jobId,
+  );
+  const total = query.data?.total ?? 0;
+  const counts = dashboardJob?.application_counts ?? emptyStatusCounts();
+
+  return {
+    job: dashboardJob,
+    applications: query.data?.items ?? [],
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    page: query.data?.page ?? page,
+    pageSize: query.data?.page_size ?? pageSize,
+    counts,
+    hasApplications: counts.total > 0,
+    isLoading: query.isLoading || dashboard.isLoading,
+    isFetching: query.isFetching || dashboard.isFetching,
+    isError: query.isError || dashboard.isError,
+    error: query.error ?? dashboard.error,
+    refetch: query.refetch,
+  };
 }

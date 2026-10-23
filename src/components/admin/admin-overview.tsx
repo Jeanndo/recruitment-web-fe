@@ -7,14 +7,15 @@ import {
   Briefcase,
   CheckCircle2,
   Clock,
+  Plus,
   Users,
   XCircle,
 } from "lucide-react";
 
-import { ApplicationStatusBadge, JobStatusBadge } from "@/components/admin/status-badge";
+import { JobStatusBadge } from "@/components/admin/status-badge";
 import { StatCard } from "@/components/admin/stat-card";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
-import { formatDate, formatDateTime, initials } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function percent(value: number, total: number) {
@@ -22,17 +23,73 @@ function percent(value: number, total: number) {
   return Math.round((value / total) * 100);
 }
 
+function OverviewSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="h-9 w-48 animate-pulse rounded bg-muted" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-32 animate-pulse rounded-2xl bg-muted/60"
+          />
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <div className="h-80 animate-pulse rounded-2xl bg-muted/60" />
+        <div className="h-80 animate-pulse rounded-2xl bg-muted/60 xl:col-span-2" />
+      </div>
+      <div className="h-72 animate-pulse rounded-2xl bg-muted/60" />
+    </div>
+  );
+}
+
 export function AdminOverview() {
-  const { summary, jobs, recentApplications } = useAdminDashboard();
+  const dashboard = useAdminDashboard();
+
+  if (dashboard.isLoading) {
+    return <OverviewSkeleton />;
+  }
+
+  if (dashboard.isError || !dashboard.data) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
+        <Briefcase
+          aria-hidden="true"
+          className="mx-auto size-8 text-muted-foreground"
+        />
+        <h1 className="mt-3 text-xl font-semibold tracking-tight">
+          Could not load the overview
+        </h1>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+          {dashboard.error instanceof Error
+            ? dashboard.error.message
+            : "Check the BrightCore API and try again."}
+        </p>
+        <button
+          type="button"
+          onClick={() => void dashboard.refetch()}
+          className="mt-5 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const summary = dashboard.data;
   const counts = summary.application_counts;
   const reviewed = counts.accepted + counts.rejected;
   const acceptanceRate = percent(counts.accepted, reviewed);
   const rejectionRate = percent(counts.rejected, reviewed);
-  const overviewJobs = jobs.slice(0, 6);
+  const overviewJobs = summary.jobs.slice(0, 6);
+  const attentionJobs = summary.jobs
+    .filter((job) => job.application_counts.pending > 0)
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Overview
@@ -41,13 +98,22 @@ export function AdminOverview() {
             A snapshot of roles and applications across BrightCore.
           </p>
         </div>
-        <Link
-          href="/admin/jobs"
-          className="inline-flex h-9 items-center justify-center gap-1.5 self-start rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted sm:self-auto"
-        >
-          View all jobs
-          <ArrowRight aria-hidden="true" className="size-4" />
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/admin/jobs"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            View all jobs
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+          <Link
+            href="/admin/jobs/new"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            New role
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -163,11 +229,9 @@ export function AdminOverview() {
         <section className="rounded-2xl border border-border bg-card shadow-sm xl:col-span-2">
           <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
             <div>
-              <h2 className="font-semibold tracking-tight">
-                Recent applications
-              </h2>
+              <h2 className="font-semibold tracking-tight">Needs attention</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                The newest candidates across all roles
+                Roles with applications waiting for a decision
               </p>
             </div>
             <Link
@@ -179,45 +243,52 @@ export function AdminOverview() {
             </Link>
           </div>
 
-          {recentApplications.length > 0 ? (
+          {attentionJobs.length > 0 ? (
             <ul className="divide-y divide-border">
-              {recentApplications.map((application) => (
-                <li key={application.id}>
+              {attentionJobs.map((job) => (
+                <li key={job.job_id}>
                   <Link
-                    href={`/admin/jobs/${application.job_id}/applications`}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50 sm:px-5"
+                    href={`/admin/jobs/${job.job_id}/applications`}
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 sm:px-5"
                   >
                     <span
                       aria-hidden="true"
-                      className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-primary"
+                      className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-sm font-semibold text-amber-700 tabular-nums dark:text-amber-300"
                     >
-                      {initials(application.full_name)}
+                      {job.application_counts.pending}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {application.full_name}
-                      </p>
+                      <p className="truncate text-sm font-medium">{job.title}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {application.job.title}
+                        {job.location} · {job.application_counts.total} total
                       </p>
                     </div>
-                    <div className="hidden shrink-0 text-right sm:block">
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(application.created_at)}
-                      </p>
+                    <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                      <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground tabular-nums">
+                        {job.application_counts.accepted} accepted
+                      </span>
+                      <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground tabular-nums">
+                        {job.application_counts.rejected} rejected
+                      </span>
                     </div>
-                    <ApplicationStatusBadge
-                      status={application.status}
-                      className="shrink-0"
-                    />
+                    <JobStatusBadge status={job.status} className="shrink-0" />
                   </Link>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-              No applications yet.
-            </p>
+            <div className="px-5 py-12 text-center">
+              <CheckCircle2
+                aria-hidden="true"
+                className="mx-auto size-8 text-emerald-600 dark:text-emerald-400"
+              />
+              <p className="mt-3 text-sm font-medium">
+                The review queue is clear
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                New applications will show up here as candidates apply.
+              </p>
+            </div>
           )}
         </section>
       </div>
@@ -227,7 +298,7 @@ export function AdminOverview() {
           <div>
             <h2 className="font-semibold tracking-tight">Jobs overview</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Roles with the most applications waiting for review
+              Applications per role, broken down by review status
             </p>
           </div>
           <Link
@@ -239,100 +310,148 @@ export function AdminOverview() {
           </Link>
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
-              <tr>
-                <th scope="col" className="px-5 py-3 font-medium">
-                  Role
-                </th>
-                <th scope="col" className="px-4 py-3 font-medium">
-                  Status
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Total
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Pending
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Accepted
-                </th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">
-                  Rejected
-                </th>
-                <th scope="col" className="px-5 py-3 text-right font-medium">
-                  <span className="sr-only">Open applications</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+        {overviewJobs.length > 0 ? (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="px-5 py-3 font-medium">
+                      Role
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Total
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Pending
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Accepted
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium">
+                      Rejected
+                    </th>
+                    <th scope="col" className="px-5 py-3 text-right font-medium">
+                      <span className="sr-only">Open applications</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {overviewJobs.map((job) => (
+                    <tr key={job.job_id} className="hover:bg-muted/30">
+                      <td className="px-5 py-3.5">
+                        <p className="font-medium">{job.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {job.location} · closes {formatDate(job.closing_date)}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <JobStatusBadge status={job.status} />
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-medium tabular-nums">
+                        {job.application_counts.total}
+                      </td>
+                      <td className="px-4 py-3.5 text-right tabular-nums">
+                        {job.application_counts.pending}
+                      </td>
+                      <td className="px-4 py-3.5 text-right tabular-nums">
+                        {job.application_counts.accepted}
+                      </td>
+                      <td className="px-4 py-3.5 text-right tabular-nums">
+                        {job.application_counts.rejected}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/jobs/${job.job_id}/applications`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            View
+                            <ArrowRight
+                              aria-hidden="true"
+                              className="size-3.5"
+                            />
+                          </Link>
+                          <Link
+                            href={`/admin/jobs/${job.job_id}/edit`}
+                            className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            Edit
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <ul className="divide-y divide-border md:hidden">
               {overviewJobs.map((job) => (
-                <tr key={job.job_id} className="hover:bg-muted/30">
-                  <td className="px-5 py-3.5">
-                    <p className="font-medium">{job.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {job.location} · closes {formatDate(job.closing_date)}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <JobStatusBadge status={job.status} />
-                  </td>
-                  <td className="px-4 py-3.5 text-right font-medium tabular-nums">
-                    {job.application_count}
-                  </td>
-                  <td className="px-4 py-3.5 text-right tabular-nums">
-                    {job.application_counts.pending}
-                  </td>
-                  <td className="px-4 py-3.5 text-right tabular-nums">
-                    {job.application_counts.accepted}
-                  </td>
-                  <td className="px-4 py-3.5 text-right tabular-nums">
-                    {job.application_counts.rejected}
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
+                <li key={job.job_id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{job.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {job.location}
+                      </p>
+                    </div>
+                    <JobStatusBadge status={job.status} className="shrink-0" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-4 gap-2 rounded-lg bg-muted/50 p-2.5 text-center">
+                    <MiniCount
+                      label="Total"
+                      value={job.application_counts.total}
+                    />
+                    <MiniCount
+                      label="Pending"
+                      value={job.application_counts.pending}
+                    />
+                    <MiniCount
+                      label="Accepted"
+                      value={job.application_counts.accepted}
+                    />
+                    <MiniCount
+                      label="Rejected"
+                      value={job.application_counts.rejected}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
                     <Link
                       href={`/admin/jobs/${job.job_id}/applications`}
                       className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                     >
-                      View
+                      View applications
                       <ArrowRight aria-hidden="true" className="size-3.5" />
                     </Link>
-                  </td>
-                </tr>
+                    <Link
+                      href={`/admin/jobs/${job.job_id}/edit`}
+                      className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      Edit role
+                    </Link>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-
-        <ul className="divide-y divide-border md:hidden">
-          {overviewJobs.map((job) => (
-            <li key={job.job_id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{job.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {job.location}
-                  </p>
-                </div>
-                <JobStatusBadge status={job.status} className="shrink-0" />
-              </div>
-              <div className="mt-3 grid grid-cols-4 gap-2 rounded-lg bg-muted/50 p-2.5 text-center">
-                <MiniCount label="Total" value={job.application_count} />
-                <MiniCount label="Pending" value={job.application_counts.pending} />
-                <MiniCount label="Accepted" value={job.application_counts.accepted} />
-                <MiniCount label="Rejected" value={job.application_counts.rejected} />
-              </div>
-              <Link
-                href={`/admin/jobs/${job.job_id}/applications`}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                View applications
-                <ArrowRight aria-hidden="true" className="size-3.5" />
-              </Link>
-            </li>
-          ))}
-        </ul>
+            </ul>
+          </>
+        ) : (
+          <div className="px-5 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No roles have been created yet.
+            </p>
+            <Link
+              href="/admin/jobs/new"
+              className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Create the first role
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

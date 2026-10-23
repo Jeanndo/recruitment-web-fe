@@ -12,35 +12,48 @@ import {
 import { ApplyForm } from "@/components/jobs/apply-form";
 import { Container } from "@/components/layout/container";
 import { Badge } from "@/components/ui/badge";
+import { ApiError, getJob } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { getMockJob, MOCK_JOBS } from "@/mocks/jobs";
+
+export const instant = false;
 
 type JobPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export function generateStaticParams() {
-  return MOCK_JOBS.map((job) => ({ id: String(job.id) }));
-}
-
 export async function generateMetadata({
   params,
 }: JobPageProps): Promise<Metadata> {
   const { id } = await params;
-  const job = getMockJob(Number(id));
+  const jobId = Number(id);
 
-  if (!job) {
+  if (Number.isNaN(jobId)) {
     return { title: "Role not found" };
   }
 
-  return { title: job.title, description: job.summary };
+  try {
+    const job = await getJob(jobId);
+    return { title: job.title, description: job.summary };
+  } catch {
+    return { title: "Role not found" };
+  }
 }
 
 export default async function JobDetailPage({ params }: JobPageProps) {
   const { id } = await params;
-  const job = getMockJob(Number(id));
+  const jobId = Number(id);
 
-  if (!job) {
+  if (Number.isNaN(jobId)) {
+    notFound();
+  }
+
+  let job;
+  try {
+    job = await getJob(jobId);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      notFound();
+    }
     notFound();
   }
 
@@ -182,7 +195,7 @@ export default async function JobDetailPage({ params }: JobPageProps) {
               </p>
             </div>
 
-            <ApplyForm jobTitle={job.title} />
+            <ApplyForm jobId={job.id} jobTitle={job.title} acceptingApplications={job.is_accepting_applications} />
           </div>
         </section>
       </Container>

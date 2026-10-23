@@ -5,14 +5,23 @@ import { Menu } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { initials } from "@/lib/format";
+import { displayRole, type AdminUser } from "@/types/admin";
 
 function pageTitle(pathname: string) {
   if (pathname.endsWith("/applications")) return "Applications";
+  if (pathname.endsWith("/jobs/new")) return "New role";
+  if (pathname.endsWith("/edit")) return "Edit role";
   if (pathname.startsWith("/admin/jobs")) return "Jobs";
   return "Overview";
 }
 
-export function AdminTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
+export function AdminTopbar({
+  user,
+  onMenuOpen,
+}: {
+  user: AdminUser;
+  onMenuOpen: () => void;
+}) {
   const pathname = usePathname();
   const title = pageTitle(pathname);
 
@@ -35,7 +44,6 @@ export function AdminTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-
         <ThemeToggle className="size-9" />
 
         <div className="hidden items-center gap-2 border-l border-border pl-3 sm:flex">
@@ -43,11 +51,13 @@ export function AdminTopbar({ onMenuOpen }: { onMenuOpen: () => void }) {
             aria-hidden="true"
             className="grid size-8 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
           >
-            {initials("Aline Mukamana")}
+            {initials(user.full_name)}
           </span>
           <div className="hidden lg:block">
-            <p className="text-xs font-medium">Aline Mukamana</p>
-            <p className="text-[11px] text-muted-foreground">Administrator</p>
+            <p className="text-xs font-medium">{user.full_name}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {displayRole(user.role)}
+            </p>
           </div>
         </div>
       </div>
