@@ -30,13 +30,13 @@ export function NewsletterCta() {
       <Container className="py-14 sm:py-20">
         <div className="rounded-3xl bg-primary px-6 py-10 text-center text-primary-foreground sm:px-12 sm:py-14">
           <div className="mx-auto max-w-2xl">
-            <p className="text-xs font-semibold tracking-[0.16em] text-blue-100 uppercase">
+            <p className="text-xs font-semibold tracking-[0.16em] text-primary-foreground/70 uppercase">
               Job alerts
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
               New roles, straight to your inbox.
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-blue-100 sm:text-base">
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-primary-foreground/80 sm:text-base">
               One short email a week with the best new openings. No noise, no
               recruiter spam — just roles worth a look.
             </p>
@@ -51,19 +51,19 @@ export function NewsletterCta() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2
                     aria-hidden="true"
-                    className="mt-0.5 size-5 shrink-0 text-white"
+                    className="mt-0.5 size-5 shrink-0 text-primary-foreground"
                   />
                   <div>
-                    <p className="font-medium text-white">
+                    <p className="font-medium text-primary-foreground">
                       You&apos;re subscribed.
                     </p>
-                    <p className="mt-1 text-sm text-blue-100">{message}</p>
+                    <p className="mt-1 text-sm text-primary-foreground/80">{message}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={reset}
-                  className="mt-4 text-sm font-medium text-white underline underline-offset-4 hover:text-blue-100"
+                  className="mt-4 text-sm font-medium text-primary-foreground underline underline-offset-4 hover:opacity-80"
                 >
                   Use a different email
                 </button>
@@ -96,10 +96,10 @@ export function NewsletterCta() {
 
                 <p
                   aria-live="polite"
-                  className="mt-3 min-h-5 text-xs text-blue-100"
+                  className="mt-3 min-h-5 text-xs text-primary-foreground/80"
                 >
                   {status === "error" ? (
-                    <span className="font-medium text-white">{message}</span>
+                    <span className="font-medium text-primary-foreground">{message}</span>
                   ) : (
                     "No spam. Unsubscribe in one click."
                   )}
