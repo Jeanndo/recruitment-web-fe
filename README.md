@@ -204,3 +204,10 @@ Set `NEXT_PUBLIC_API_URL` to the public API origin at build time, and set
 `API_URL` to the origin reachable from the Next.js server. The API must allow
 the site's origin in `CORS_ORIGINS` and, when served over HTTPS, should use
 `COOKIE_SECURE=true`.
+
+## WATCH THE DEMO VIDEO HERE 
+
+<!-- <img width="1306" height="738" alt="Screenshot From 2026-10-23 17-14-08" src="https://github.com/user-attachments/assets/efd45c64-10d2-48dc-ba04-869733f21b8d" /> -->
+[![Watch the Demo Video](https://github.com/user-attachments/assets/efd45c64-10d2-48dc-ba04-869733f21b8d)](https://www.awesomescreenshot.com/video/57724061?key=dcf163a99d1d5b65cd177b5c308dde25)
+
+
