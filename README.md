@@ -1,0 +1,1 @@
+# BrightCore e-Recruitment web application
