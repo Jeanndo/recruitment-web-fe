@@ -3,6 +3,8 @@ import { Suspense } from "react";
 
 import { AdminJobs } from "@/components/admin/admin-jobs";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Jobs",
 };

@@ -4,11 +4,14 @@ import { Suspense, useDeferredValue, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowUpRight,
   Check,
   Download,
   Inbox,
+  Loader2,
+  Pencil,
   Search,
   SearchX,
   X,
@@ -20,13 +23,12 @@ import {
   JobStatusBadge,
 } from "@/components/admin/status-badge";
 import { Pagination } from "@/components/ui/pagination";
+import { useDownloadCv, useUpdateApplicationStatus } from "@/hooks/use-application-review";
 import { useJobApplications } from "@/hooks/use-job-applications";
 import { formatDate, formatDateTime, initials } from "@/lib/format";
-import { downloadMockCv } from "@/lib/mock-cv";
 import { cn } from "@/lib/utils";
-import { useAdminStore } from "@/stores/admin-store";
 import type {
-  AdminApplicationDetail,
+  AdminApplicationItem,
   ApplicationFilter,
   ApplicationStatus,
 } from "@/types/admin";
@@ -38,6 +40,17 @@ const filters: ApplicationFilter[] = [
   "Rejected",
 ];
 
+function PageSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+      <div className="h-9 w-72 animate-pulse rounded bg-muted" />
+      <div className="h-20 animate-pulse rounded-2xl bg-muted/60" />
+      <div className="h-72 animate-pulse rounded-2xl bg-muted/60" />
+    </div>
+  );
+}
+
 function JobApplicationsInner() {
   const params = useParams<{ id: string }>();
   const jobId = Number(params?.id);
@@ -45,7 +58,10 @@ function JobApplicationsInner() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    tone: "success" | "error";
+  } | null>(null);
   const deferredSearch = useDeferredValue(search);
 
   const {
@@ -57,7 +73,11 @@ function JobApplicationsInner() {
     pageSize,
     counts,
     hasApplications,
-    hasFilters,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
   } = useJobApplications({
     jobId,
     status,
@@ -65,33 +85,98 @@ function JobApplicationsInner() {
     page,
   });
 
-  const allApplications = useAdminStore((state) => state.applications);
-  const updateApplicationStatus = useAdminStore(
-    (state) => state.updateApplicationStatus,
-  );
-
-  const selectedApplication =
-    selectedId === null
-      ? null
-      : allApplications.find((application) => application.id === selectedId);
+  const updateStatus = useUpdateApplicationStatus();
+  const download = useDownloadCv();
 
   function changeStatus(
-    application: AdminApplicationDetail,
+    application: AdminApplicationItem,
     nextStatus: ApplicationStatus,
   ) {
-    const result = updateApplicationStatus(application.id, nextStatus);
-    setFeedback(result.message);
+    updateStatus.mutate(
+      { id: application.id, status: nextStatus },
+      {
+        onSuccess: () => {
+          setFeedback({
+            message: `${application.full_name} was ${nextStatus.toLowerCase()}.`,
+            tone: "success",
+          });
+        },
+        onError: (mutationError) => {
+          setFeedback({
+            message:
+              mutationError instanceof Error
+                ? mutationError.message
+                : "The review could not be saved.",
+            tone: "error",
+          });
+        },
+      },
+    );
   }
 
-  function downloadCv(application: AdminApplicationDetail) {
-    downloadMockCv(application);
-    setFeedback(`Preparing a preview CV for ${application.full_name}.`);
+  function downloadCv(application: AdminApplicationItem) {
+    download.mutate(application, {
+      onSuccess: (filename) => {
+        setFeedback({
+          message: `Downloaded ${filename}.`,
+          tone: "success",
+        });
+      },
+      onError: (mutationError) => {
+        setFeedback({
+          message:
+            mutationError instanceof Error
+              ? mutationError.message
+              : "The CV could not be downloaded.",
+          tone: "error",
+        });
+      },
+    });
   }
 
   function clearFilters() {
     setStatus("All");
     setSearch("");
     setPage(1);
+  }
+
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
+        <AlertCircle
+          aria-hidden="true"
+          className="mx-auto size-8 text-destructive"
+        />
+        <h1 className="mt-3 text-xl font-semibold tracking-tight">
+          Could not load applications
+        </h1>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+          {error instanceof Error
+            ? error.message
+            : "Check the API and try again."}
+        </p>
+        <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+          <Link
+            href="/admin/jobs"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            Back to jobs
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!job) {
@@ -124,6 +209,11 @@ function JobApplicationsInner() {
     Accepted: counts.accepted,
     Rejected: counts.rejected,
   };
+  const isChanging = (application: AdminApplicationItem) =>
+    updateStatus.isPending && updateStatus.variables?.id === application.id;
+  const isDownloading = (application: AdminApplicationItem) =>
+    download.isPending && download.variables?.id === application.id;
+  const hasFilters = status !== "All" || deferredSearch.trim() !== "";
 
   return (
     <div className="space-y-5">
@@ -151,11 +241,20 @@ function JobApplicationsInner() {
             </p>
           </div>
 
-          <div className="grid shrink-0 grid-cols-4 divide-x divide-border rounded-xl border border-border bg-card py-2.5 shadow-sm">
-            <SummaryCount label="Total" value={counts.total} />
-            <SummaryCount label="Pending" value={counts.pending} />
-            <SummaryCount label="Accepted" value={counts.accepted} />
-            <SummaryCount label="Rejected" value={counts.rejected} />
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="grid shrink-0 grid-cols-4 divide-x divide-border rounded-xl border border-border bg-card py-2.5 shadow-sm">
+              <SummaryCount label="Total" value={counts.total} />
+              <SummaryCount label="Pending" value={counts.pending} />
+              <SummaryCount label="Accepted" value={counts.accepted} />
+              <SummaryCount label="Rejected" value={counts.rejected} />
+            </div>
+            <Link
+              href={`/admin/jobs/${job.job_id}/edit`}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              <Pencil aria-hidden="true" className="size-4" />
+              Edit role
+            </Link>
           </div>
         </div>
       </div>
@@ -213,11 +312,16 @@ function JobApplicationsInner() {
 
       {feedback ? (
         <div
-          role="status"
+          role={feedback.tone === "error" ? "alert" : "status"}
           aria-live="polite"
-          className="flex items-center gap-3 rounded-xl border border-primary/20 bg-accent/60 px-4 py-2.5 text-sm"
+          className={cn(
+            "flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm",
+            feedback.tone === "error"
+              ? "border-destructive/20 bg-destructive/10 text-destructive"
+              : "border-primary/20 bg-accent/60 text-foreground",
+          )}
         >
-          <span className="min-w-0 flex-1">{feedback}</span>
+          <span className="min-w-0 flex-1">{feedback.message}</span>
           <button
             type="button"
             onClick={() => setFeedback(null)}
@@ -229,11 +333,16 @@ function JobApplicationsInner() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <section
+        className={cn(
+          "overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-opacity",
+          isFetching && "opacity-60",
+        )}
+      >
         {applications.length > 0 ? (
           <>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">
@@ -288,7 +397,9 @@ function JobApplicationsInner() {
                         <button
                           type="button"
                           onClick={() => downloadCv(application)}
-                          disabled={!application.cv_available}
+                          disabled={
+                            !application.cv_available || isDownloading(application)
+                          }
                           aria-label={`Download CV for ${application.full_name}`}
                           title={
                             application.cv_available
@@ -297,7 +408,14 @@ function JobApplicationsInner() {
                           }
                           className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                         >
-                          <Download aria-hidden="true" className="size-4" />
+                          {isDownloading(application) ? (
+                            <Loader2
+                              aria-hidden="true"
+                              className="size-4 animate-spin"
+                            />
+                          ) : (
+                            <Download aria-hidden="true" className="size-4" />
+                          )}
                         </button>
                       </td>
                       <td className="px-5 py-3.5">
@@ -308,11 +426,19 @@ function JobApplicationsInner() {
                               onClick={() =>
                                 changeStatus(application, "Accepted")
                               }
+                              disabled={isChanging(application)}
                               aria-label={`Accept ${application.full_name}`}
                               title="Accept application"
-                              className="inline-flex size-8 items-center justify-center rounded-lg text-emerald-700 transition-colors hover:bg-emerald-500/10 dark:text-emerald-300"
+                              className="inline-flex size-8 items-center justify-center rounded-lg text-emerald-700 transition-colors hover:bg-emerald-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-emerald-300"
                             >
-                              <Check aria-hidden="true" className="size-4" />
+                              {isChanging(application) ? (
+                                <Loader2
+                                  aria-hidden="true"
+                                  className="size-4 animate-spin"
+                                />
+                              ) : (
+                                <Check aria-hidden="true" className="size-4" />
+                              )}
                             </button>
                           ) : null}
                           {application.status !== "Rejected" ? (
@@ -321,9 +447,10 @@ function JobApplicationsInner() {
                               onClick={() =>
                                 changeStatus(application, "Rejected")
                               }
+                              disabled={isChanging(application)}
                               aria-label={`Reject ${application.full_name}`}
                               title="Reject application"
-                              className="inline-flex size-8 items-center justify-center rounded-lg text-rose-700 transition-colors hover:bg-rose-500/10 dark:text-rose-300"
+                              className="inline-flex size-8 items-center justify-center rounded-lg text-rose-700 transition-colors hover:bg-rose-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-rose-300"
                             >
                               <X aria-hidden="true" className="size-4" />
                             </button>
@@ -386,19 +513,36 @@ function JobApplicationsInner() {
                     <button
                       type="button"
                       onClick={() => downloadCv(application)}
-                      disabled={!application.cv_available}
+                      disabled={
+                        !application.cv_available || isDownloading(application)
+                      }
                       className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
                     >
-                      <Download aria-hidden="true" className="size-3.5" />
+                      {isDownloading(application) ? (
+                        <Loader2
+                          aria-hidden="true"
+                          className="size-3.5 animate-spin"
+                        />
+                      ) : (
+                        <Download aria-hidden="true" className="size-3.5" />
+                      )}
                       CV
                     </button>
                     {application.status !== "Accepted" ? (
                       <button
                         type="button"
                         onClick={() => changeStatus(application, "Accepted")}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                        disabled={isChanging(application)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-40"
                       >
-                        <Check aria-hidden="true" className="size-3.5" />
+                        {isChanging(application) ? (
+                          <Loader2
+                            aria-hidden="true"
+                            className="size-3.5 animate-spin"
+                          />
+                        ) : (
+                          <Check aria-hidden="true" className="size-3.5" />
+                        )}
                         Accept
                       </button>
                     ) : null}
@@ -406,7 +550,8 @@ function JobApplicationsInner() {
                       <button
                         type="button"
                         onClick={() => changeStatus(application, "Rejected")}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-500/30 px-2.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-500/10 dark:text-rose-300"
+                        disabled={isChanging(application)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-500/30 px-2.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-500/10 disabled:pointer-events-none disabled:opacity-40 dark:text-rose-300"
                       >
                         <X aria-hidden="true" className="size-3.5" />
                         Reject
@@ -471,18 +616,16 @@ function JobApplicationsInner() {
         ariaLabel="Application pages"
       />
 
-
-      {selectedApplication ? (
-        <ApplicationDetailSheet
-          key={selectedApplication.id}
-          application={selectedApplication}
-          open
-          onOpenChange={(open) => {
-            if (!open) setSelectedId(null);
-          }}
-          onNotify={setFeedback}
-        />
-      ) : null}
+      <ApplicationDetailSheet
+        applicationId={selectedId}
+        open={selectedId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+        onNotify={(message) =>
+          setFeedback({ message, tone: "success" })
+        }
+      />
     </div>
   );
 }
@@ -500,7 +643,7 @@ function SummaryCount({ label, value }: { label: string; value: number }) {
 
 export function JobApplications() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageSkeleton />}>
       <JobApplicationsInner />
     </Suspense>
   );

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Briefcase, LayoutDashboard, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Briefcase, LayoutDashboard, Loader2, LogOut } from "lucide-react";
 
 import { Brand } from "@/components/layout/brand";
-import { cn } from "@/lib/utils";
+import { useLogout } from "@/hooks/use-admin-auth";
 import { initials } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { displayRole, type AdminUser } from "@/types/admin";
 
 const navigation = [
   {
@@ -24,21 +26,32 @@ const navigation = [
 ];
 
 export function AdminSidebar({
+  user,
   onNavigate,
 }: {
+  user: AdminUser;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const logout = useLogout();
+
+  function handleSignOut() {
+    logout.mutate(undefined, {
+      onSettled: () => {
+        router.replace("/admin/sign-in");
+        router.refresh();
+      },
+    });
+  }
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 items-center gap-2 border-b border-sidebar-border pr-12 pl-5">
         <Brand href="/admin" />
-        
       </div>
 
       <nav aria-label="Admin" className="flex-1 space-y-1 p-4">
-       
         {navigation.map((item) => {
           const active = item.isActive(pathname);
           const Icon = item.icon;
@@ -69,24 +82,29 @@ export function AdminSidebar({
             aria-hidden="true"
             className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
           >
-            {initials("Aline Mukamana")}
+            {initials(user.full_name)}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">Aline Mukamana</p>
+            <p className="truncate text-sm font-medium">{user.full_name}</p>
             <p className="truncate text-xs text-muted-foreground">
-              Administrator
+              {displayRole(user.role)}
             </p>
           </div>
         </div>
 
-        <Link
-          href="/sign-in"
-          onClick={onNavigate}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={logout.isPending}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground disabled:pointer-events-none disabled:opacity-50"
         >
-          <LogOut aria-hidden="true" className="size-4" />
-          Sign out
-        </Link>
+          {logout.isPending ? (
+            <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          ) : (
+            <LogOut aria-hidden="true" className="size-4" />
+          )}
+          {logout.isPending ? "Signing out…" : "Sign out"}
+        </button>
       </div>
     </div>
   );

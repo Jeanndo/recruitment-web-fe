@@ -3,6 +3,8 @@ import { Suspense } from "react";
 
 import { AdminOverview } from "@/components/admin/admin-overview";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Overview",
 };

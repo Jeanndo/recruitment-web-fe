@@ -30,3 +30,12 @@ export interface PaginatedResponse<T> {
   page_size: number;
   total: number;
 }
+
+/** Full job details as returned by the public job endpoint. */
+export interface JobDetail extends JobListItem {
+  description: string;
+  responsibilities: string[];
+  requirements: string[];
+  created_at?: string;
+  updated_at?: string;
+}
