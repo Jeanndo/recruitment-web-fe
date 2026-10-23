@@ -2,10 +2,16 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-export function Brand({ className }: { className?: string }) {
+export function Brand({
+  className,
+  href = "/",
+}: {
+  className?: string;
+  href?: string;
+}) {
   return (
     <Link
-      href="/"
+      href={href}
       aria-label="BrightCore — home"
       className={cn(
         "inline-flex items-center gap-2.5 text-lg font-semibold tracking-tight transition-opacity hover:opacity-80",

@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 
 import { Brand } from "@/components/layout/brand";
 import { Container } from "@/components/layout/container";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
   Sheet,
   SheetClose,
@@ -39,6 +40,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle className="hidden sm:inline-flex" />
           <Link
             href="/sign-in"
             className="hidden h-10 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
@@ -88,6 +90,15 @@ export function SiteHeader() {
               </nav>
 
               <div className="space-y-2 p-5">
+                <div className="mb-3 flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">Appearance</p>
+                    <p className="text-xs text-muted-foreground">
+                      Light or dark theme
+                    </p>
+                  </div>
+                  <ThemeToggle className="size-9 border-0 bg-muted" />
+                </div>
                 <SheetClose asChild>
                   <Link
                     href="/sign-in"
