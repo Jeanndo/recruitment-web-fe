@@ -3,7 +3,7 @@
 The candidate-facing careers site and the protected admin workspace for
 BrightCore Technology Services.
 
-The app talks to the BrightCore API in the `backend/` repository. Public
+The app talks to the BrightCore API in the `recruitment-be/` repository. Public
 visitors can browse jobs and apply; BrightCore staff sign in once at
 `/sign-in` and manage jobs and applications from `/admin`.
 
@@ -93,10 +93,10 @@ frontend/
 
 ## Quick start
 
-Start the backend first (see `backend/README.md`), then:
+Start the backend first (see `recruitment-be /README.md`), then:
 
 ```bash
-cd frontend
+cd recruitment-web-fe
 
 # 1. Local environment
 cp .env.example .env.local
